@@ -1,4 +1,4 @@
-name: Build php7-mod-db for OpenWrt 21.02 (x86_64)
+name: Build php7-mod-db for OpenWrt 21.02 x86_64 (SDK)
 
 on:
   workflow_dispatch:
@@ -14,13 +14,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential ccache ecj fastjar file g++ gawk \
-            gcc-multilib gettext git java-propose-classpath libncurses5-dev \
-            libssl-dev python3 python3-distutils unzip wget zlib1g-dev subversion
+          sudo apt install -y build-essential gawk unzip wget libncurses5-dev zlib1g-dev
 
-      - name: Clone OpenWrt 21.02
+      - name: Download OpenWrt 21.02 SDK (x86_64)
         run: |
-          git clone -b openwrt-21.02 https://github.com/openwrt/openwrt.git openwrt
+          wget https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/openwrt-sdk-21.02.7-x86-64_gcc-8.4.0_musl.Linux-x86_64.tar.xz
+          tar -xf openwrt-sdk-21.02.7-x86-64_gcc-8.4.0_musl.Linux-x86_64.tar.xz
+          mv openwrt-sdk-21.02.7-x86-64_gcc-8.4.0_musl.Linux-x86_64 openwrt
           cd openwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
@@ -39,7 +39,6 @@ jobs:
 
           PKG_SOURCE_PROTO:=git
           PKG_SOURCE_URL:=https://github.com/pear/DB.git
-          PKG_SOURCE_DATE:=2020-01-01
           PKG_SOURCE_VERSION:=master
           PKG_MIRROR_HASH:=skip
 
@@ -64,14 +63,6 @@ jobs:
 
           $(eval $(call BuildPackage,php7-mod-db))
           EOF
-
-      - name: Configure target (x86_64)
-        run: |
-          cd openwrt
-          echo "CONFIG_TARGET_x86=y" > .config
-          echo "CONFIG_TARGET_x86_64=y" >> .config
-          echo "CONFIG_TARGET_x86_64_Generic=y" >> .config
-          make defconfig
 
       - name: Build package only
         run: |

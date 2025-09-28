@@ -1,0 +1,85 @@
+name: Build php7-mod-db for OpenWrt 21.02 (x86_64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential ccache ecj fastjar file g++ gawk \
+            gcc-multilib gettext git java-propose-classpath libncurses5-dev \
+            libssl-dev python3 python3-distutils unzip wget zlib1g-dev subversion
+
+      - name: Clone OpenWrt 21.02
+        run: |
+          git clone -b openwrt-21.02 https://github.com/openwrt/openwrt.git openwrt
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Add php7-mod-db package
+        run: |
+          cd openwrt/package
+          mkdir -p php7-mod-db
+          cd php7-mod-db
+          cat > Makefile <<'EOF'
+          include $(TOPDIR)/rules.mk
+
+          PKG_NAME:=php7-mod-db
+          PKG_VERSION:=1.9.2
+          PKG_RELEASE:=1
+
+          PKG_SOURCE_PROTO:=git
+          PKG_SOURCE_URL:=https://github.com/pear/DB.git
+          PKG_SOURCE_DATE:=2020-01-01
+          PKG_SOURCE_VERSION:=master
+          PKG_MIRROR_HASH:=skip
+
+          include $(INCLUDE_DIR)/package.mk
+          include ../php7/pecl.mk
+
+          PHP7PECL_BUILD_DIR:=$(BUILD_DIR)/DB
+
+          define Package/php7-mod-db
+            SECTION:=lang
+            CATEGORY:=Languages
+            SUBMENU:=PHP
+            TITLE:=PEAR DB abstraction layer
+            DEPENDS:=+php7 +php7-mod-mysqli
+          endef
+
+          define Package/php7-mod-db/install
+            $(INSTALL_DIR) $(1)/usr/share/php
+            cp -r $(PHP7PECL_BUILD_DIR)/DB $(1)/usr/share/php/
+            $(INSTALL_BIN) $(PHP7PECL_BUILD_DIR)/DB.php $(1)/usr/share/php/
+          endef
+
+          $(eval $(call BuildPackage,php7-mod-db))
+          EOF
+
+      - name: Configure target (x86_64)
+        run: |
+          cd openwrt
+          echo "CONFIG_TARGET_x86=y" > .config
+          echo "CONFIG_TARGET_x86_64=y" >> .config
+          echo "CONFIG_TARGET_x86_64_Generic=y" >> .config
+          make defconfig
+
+      - name: Build package only
+        run: |
+          cd openwrt
+          make package/php7-mod-db/compile V=s
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: php7-mod-db-ipks
+          path: openwrt/bin/packages/**/php7-mod-db*.ipk

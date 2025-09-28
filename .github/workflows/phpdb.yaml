@@ -79,7 +79,7 @@ jobs:
           make package/php7-mod-db/compile V=s
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: php7-mod-db-ipks
           path: openwrt/bin/packages/**/php7-mod-db*.ipk

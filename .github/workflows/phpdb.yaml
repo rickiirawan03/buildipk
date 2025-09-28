@@ -64,6 +64,12 @@ jobs:
           $(eval $(call BuildPackage,php7-mod-db))
           EOF
 
+      - name: Configure SDK
+        run: |
+          cd openwrt
+          # generate default .config without menuconfig
+          make defconfig
+
       - name: Build package only
         run: |
           cd openwrt
